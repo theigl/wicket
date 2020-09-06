@@ -27,8 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -373,6 +375,224 @@ class MarkupContainerTest extends WicketTestCase
 
 		// and that there are no more children to iterate
 		assertFalse(iterator.hasNext());
+	}
+
+	@Test
+	void removingComponentDoesNotFailVisitChildren() {
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		Component label2 = new Label("label2", "Label2");
+		Component label3 = new Label("label3", "Label3");
+		Component label4 = new Label("label4", "Label4");
+		Component label5 = new Label("label5", "Label5");
+
+		wmc.add(label1);
+		wmc.add(label2);
+		wmc.add(label3);
+		wmc.add(label4);
+		wmc.add(label5);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+			if (object.equals(label3)) {
+				wmc.remove(label3);
+				wmc.remove(label2);
+				wmc.remove(label4);
+			}
+		});
+
+		assertThat(visited).hasSize(4);
+		assertThat(visited.values()).allMatch(v -> v == 1);
+		assertThat(visited.keySet()).containsOnly(label1, label2, label3, label5);
+	}
+
+	@Test
+	void removingAllComponentsDoesNotFailVisitChildren()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		wmc.add(label1);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+			wmc.removeAll();
+			wmc.detach();
+		});
+
+		assertThat(visited).hasSize(1);
+		assertThat(visited.values()).allMatch(v -> v == 1);
+	}
+
+	@Test
+	void removingCurrentComponentAndDetachingDoesNotFailVisitChildren()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		Component label2 = new Label("label2", "Label2");
+
+		wmc.add(label1);
+		wmc.add(label2);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+			if (object.equals(label1))
+			{
+				wmc.remove(label1);
+				wmc.detach();
+			}
+		});
+
+		assertThat(visited).hasSize(1);
+		assertThat(visited.values()).allMatch(v -> v == 1);
+		assertThat(visited.keySet()).containsOnly(label1);
+	}
+
+	@Test
+	void removingCurrentComponentAndDetachingDoesNotFailIteration()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		Component label2 = new Label("label2", "Label2");
+
+		wmc.add(label1);
+		wmc.add(label2);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		for (Component object : wmc) {
+			visited.merge(object, 1, Integer::sum);
+			if (object.equals(label1))
+			{
+				wmc.remove(label1);
+				wmc.detach();
+			}
+		}
+
+		assertThat(visited).hasSize(1);
+		assertThat(visited.values()).allMatch(v -> v == 1);
+		assertThat(visited.keySet()).containsOnly(label1);
+	}
+
+	@Test
+	void addingComponentDoesNotFailVisitChildren()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		Component label2 = new Label("label2", "Label2");
+		Component label3 = new Label("label3", "Label3");
+		Component label4 = new Label("label4", "Label4");
+		Component label5 = new Label("label5", "Label5");
+
+		wmc.add(label1);
+		wmc.add(label2);
+		wmc.add(label3);
+		wmc.add(label4);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+			if (object.equals(label4))
+			{
+				wmc.add(label5);
+			}
+		});
+
+		assertThat(visited).hasSize(wmc.size());
+		assertThat(visited.values()).allMatch(v -> v == 1);
+	}
+
+	@Test
+	void addingManyComponentsDoesNotFailVisitChildren()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Component label1 = new Label("label1", "Label1");
+		wmc.add(label1);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+			if (object.equals(label1))
+			{
+				addNChildren(wmc, NUMBER_OF_CHILDREN_FOR_A_MAP + 1);
+			}
+		});
+
+		assertThat(visited).hasSize(wmc.size());
+		assertThat(visited.values()).allMatch(v -> v == 1);
+	}
+
+	@Test
+	void visitChildrenChildrenAreEmpty()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+		});
+
+		assertThat(visited).isEmpty();
+	}
+
+	@Test
+	void visitChildrenChildrenAreSingleElement()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+		WebMarkupContainer childWmc = new WebMarkupContainer("child");
+		addNChildren(childWmc, 1);
+		wmc.add(childWmc);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+		});
+
+		assertThat(visited).hasSize(wmc.size() + childWmc.size());
+		assertThat(visited.values()).allMatch(v -> v == 1);
+	}
+
+	@Test
+	void visitChildrenWhenChildrenAreList()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+		WebMarkupContainer childWmc = new WebMarkupContainer("child");
+		addNChildren(childWmc, NUMBER_OF_CHILDREN_FOR_A_MAP -1);
+		wmc.add(childWmc);
+		addNChildren(wmc, NUMBER_OF_CHILDREN_FOR_A_MAP -1);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+		});
+
+		assertThat(visited).hasSize(wmc.size() + childWmc.size());
+		assertThat(visited.values()).allMatch(v -> v == 1);
+	}
+
+	@Test
+	void visitChildrenWhenChildrenAreMap()
+	{
+		WebMarkupContainer wmc = new WebMarkupContainer("id");
+		WebMarkupContainer childWmc = new WebMarkupContainer("child");
+		addNChildren(childWmc, NUMBER_OF_CHILDREN_FOR_A_MAP + 1);
+		wmc.add(childWmc);
+		addNChildren(wmc, NUMBER_OF_CHILDREN_FOR_A_MAP + 1);
+
+		Map<Component, Integer> visited = new HashMap<>();
+		wmc.visitChildren((object, visit) -> {
+			visited.merge(object, 1, Integer::sum);
+		});
+
+		assertThat(visited).hasSize(wmc.size() + childWmc.size());
+		assertThat(visited.values()).allMatch(v -> v == 1);
 	}
 
 	@Test

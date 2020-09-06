@@ -57,8 +57,9 @@ import org.apache.wicket.util.lang.Generics;
 import org.apache.wicket.util.string.Strings;
 import org.apache.wicket.util.visit.ClassVisitFilter;
 import org.apache.wicket.util.visit.IVisit;
+import org.apache.wicket.util.visit.IVisitFilter;
 import org.apache.wicket.util.visit.IVisitor;
-import org.apache.wicket.util.visit.Visits;
+import org.apache.wicket.util.visit.Visit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,6 +140,63 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 * key is an expensive operation. With this flag this expensive call can be avoided.
 	 */
 	private static final short RFLAG_HAS_REMOVALS = 0x4000;
+
+	private abstract static class ImmutableVisit extends Visit<Void>
+	{
+		@Override
+		public void stop()
+		{
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void stop(Void result)
+		{
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void dontGoDeeper()
+		{
+			throw new UnsupportedOperationException();
+		}
+	}
+
+	private static final Visit<Void> VISIT_DEEP = new ImmutableVisit()
+	{
+		@Override
+		public boolean isStopped() {
+			return false;
+		}
+
+		@Override
+		public boolean isContinue() {
+			return true;
+		}
+
+		@Override
+		public boolean isDontGoDeeper() {
+			return false;
+		}
+	};
+
+	private static final Visit<Void> VISIT_FLAT = new ImmutableVisit()
+	{
+		@Override
+		public boolean isStopped() {
+			return false;
+		}
+
+		@Override
+		public boolean isContinue() {
+			return false;
+		}
+
+		@Override
+		public boolean isDontGoDeeper() {
+			return true;
+		}
+	};
 
 	/**
 	 * Administrative class for detecting removed children during child iteration. Not intended to
@@ -744,14 +802,14 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		{
 			addStateChange();
 
-			for (Component child : this)
+			forEach((child, visit) ->
 			{
 				// Do not call remove() because the state change would then be
 				// recorded twice.
 				child.internalOnRemove();
 				child.detach();
 				child.setParent(null);
-			}
+			});
 
 			children = null;
 			removals_add(null, null);
@@ -950,6 +1008,16 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		return buffer.toString();
 	}
 
+	public void forEach(IVisitor<Component, Void> consumer)
+	{
+		visitChildren(this, consumer, VISIT_FLAT);
+	}
+
+	public void forEachInHierarchy(IVisitor<Component, Void> consumer)
+	{
+		visitChildren(this, consumer, VISIT_DEEP);
+	}
+
 	/**
 	 * Traverses all child components of the given class in this container, calling the visitor's
 	 * visit method at each one.
@@ -970,7 +1038,9 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	public final <S extends Component, R> R visitChildren(final Class<?> clazz,
 		final IVisitor<S, R> visitor)
 	{
-		return Visits.visitChildren(this, visitor, new ClassVisitFilter(clazz));
+		Visit<R> visit = new Visit<>();
+		visitChildren(this, visitor, new ClassVisitFilter(clazz), visit);
+		return visit.getResult();
 	}
 
 	/**
@@ -985,7 +1055,199 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 */
 	public final <R> R visitChildren(final IVisitor<Component, R> visitor)
 	{
-		return Visits.visitChildren(this, visitor);
+		final Visit<R> visit = new Visit<>();
+		visitChildren(this, visitor, visit);
+		return visit.getResult();
+	}
+
+	private static <S extends Component, R> void visitChildren(MarkupContainer c, IVisitor<S, R> visitor,
+												Visit<R> visit)
+	{
+		visitChildren(c, visitor, null, visit);
+	}
+
+ 	private static <S extends Component, R> void visitChildren(MarkupContainer c, IVisitor<S, R> visitor,
+														IVisitFilter filter, Visit<R> visit)
+	{
+		if (c.children instanceof LinkedMap) {
+			visitMap(c, visitor, filter, visit);
+		} else {
+			visitList(c, visitor, filter, visit);
+		}
+	}
+
+	private static <S extends Component, R> void visitMap(MarkupContainer c, IVisitor<S, R> visitor, IVisitFilter filter, Visit<R> visit) {
+		// Iterate through children of this container
+		for (final Object child : c)
+		{
+			// Get next child component
+			// Is the child of the correct class (or was no class specified)?
+			if (filter == null || filter.visitObject(child))
+			{
+				Visit<R> childTraversal = visit instanceof ImmutableVisit ? visit : new Visit<>();
+
+				// Call visitor
+				S s = (S)child;
+				visitor.component(s, childTraversal);
+
+				if (childTraversal.isStopped())
+				{
+					visit.stop(childTraversal.getResult());
+					return;
+				}
+				else if (childTraversal.isDontGoDeeper())
+				{
+					continue;
+				}
+			}
+
+			// If child is a container
+			if (!visit.isDontGoDeeper() && (child instanceof MarkupContainer) &&
+					(filter == null || filter.visitChildren(child)))
+			{
+				// visit the children in the container
+				visitChildren((MarkupContainer)child, visitor, filter, visit);
+
+				if (visit.isStopped())
+				{
+					return;
+				}
+			}
+		}
+	}
+
+	/**
+	 * This implementation is significantly faster and almost allocation free for containers with up to
+	 * {@link #MAPIFY_THRESHOLD} children. It loops over the children without createing an {@link #iterator()}.
+	 */
+	private static  <S extends Component, R> void visitList(MarkupContainer c, IVisitor<S, R> visitor,
+															IVisitFilter filter, Visit<R> visit)
+	{
+		Component child = null;
+		restart : while (true)
+		{
+			final List<Component> components = c.children_list();
+			if (components == null)
+			{
+				return;
+			}
+
+			int start = 0;
+			if (child != null)
+			{
+				child = findLastExistingChildAlreadyReturned(c, child);
+				final int childIdx = components.indexOf(child);
+				if (childIdx == -1)
+				{
+					break;
+				}
+				start = childIdx + 1;
+			}
+			final int expectedModCounter = c.modCounter;
+
+			// Iterate through children of this container
+			final int size = components.size();
+			for (int i = start; i < size; i++)
+			{
+				if (expectedModCounter < c.modCounter)
+				{
+					continue restart;
+				}
+
+				child = components.get(i);
+
+				// Get next child component
+				// Is the child of the correct class (or was no class specified)?
+				if (filter == null || filter.visitObject(child))
+				{
+					Visit<R> childTraversal = visit instanceof ImmutableVisit ? visit : new Visit<>();
+
+					// Call visitor
+					S s = (S)child;
+					visitor.component(s, childTraversal);
+
+					if (childTraversal.isStopped())
+					{
+						visit.stop(childTraversal.getResult());
+						return;
+					}
+					else if (childTraversal.isDontGoDeeper())
+					{
+						continue;
+					}
+				}
+
+				// If child is a container
+				if (!visit.isDontGoDeeper() && (child instanceof MarkupContainer) &&
+					(filter == null || filter.visitChildren(child)))
+				{
+					// visit the children in the container
+					visitChildren((MarkupContainer)child, visitor, filter, visit);
+
+					if (visit.isStopped())
+					{
+						return;
+					}
+				}
+			}
+
+			if (expectedModCounter < c.modCounter)
+			{
+				continue;
+			}
+
+			break;
+		}
+	}
+
+	private static Component findLastExistingChildAlreadyReturned(MarkupContainer c, Component current)
+	{
+		if (current == null)
+		{
+			return null;
+		}
+		else
+		{
+			LinkedList<RemovedChild> removals = c.removals_get();
+			if (removals != null)
+			{
+				check_removed : while (current != null)
+				{
+					for (int i = 0; i < removals.size(); i++)
+					{
+						RemovedChild removal = removals.get(i);
+						if (removal.removedChild == current || removal.removedChild == null)
+						{
+							current = removal.previousSibling;
+
+							// current was removed, use its sibling instead
+							continue check_removed;
+						}
+					}
+
+					// current wasn't removed, keep it
+					break;
+				}
+			}
+		}
+		return current;
+	}
+
+	private List<Component> children_list()
+	{
+		if (children == null)
+		{
+			return null;
+		}
+		if (children instanceof Component)
+		{
+			return Collections.singletonList(children());
+		}
+		if (children instanceof List)
+		{
+			return children();
+		}
+		return new ArrayList<>(this.<LinkedMap<String, Component>>children().values());
 	}
 
 	/**
@@ -1048,14 +1310,8 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	public final void internalInitialize()
 	{
 		super.fireInitialize();
-		visitChildren(new IVisitor<Component, Void>()
-		{
-			@Override
-			public void component(final Component component, final IVisit<Void> visit)
-			{
-				component.fireInitialize();
-			}
-		});
+
+		forEachInHierarchy((o, v) -> o.fireInitialize());
 	}
 
 	/*
@@ -1671,21 +1927,16 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	{
 		super.removeChildren();
 
-		for (Component component : this)
-		{
-			component.internalOnRemove();
-		}
+		forEach((child, visit) -> child.internalOnRemove());
 	}
+
 
 	@Override
 	void detachChildren()
 	{
 		super.detachChildren();
 
-		for (Component component : this)
-		{
-			component.detach();
-		}
+		forEach((child, visit) -> child.detach());
 	}
 
 	/**
@@ -1697,9 +1948,11 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	{
 		super.internalMarkRendering(setRenderingFlag);
 
-		for (Component child : this)
-		{
-			child.internalMarkRendering(setRenderingFlag);
+		// Use non-capturing lambdas to avoid allocation
+		if (setRenderingFlag) {
+			forEach((child, visit) -> child.internalMarkRendering(true));
+		} else {
+			forEach((child, visit) -> child.internalMarkRendering(false));
 		}
 	}
 
@@ -1735,8 +1988,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		try
 		{
 			// Loop through child components
-			for (final Component child : this)
-			{
+			forEach((child, visit) -> {
 				// Get next child
 				// Call begin request on the child
 				// We need to check whether the child's wasn't removed from the
@@ -1746,7 +1998,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 				{
 					child.beforeRender();
 				}
-			}
+			});
 		}
 		catch (RuntimeException ex)
 		{
@@ -1766,28 +2018,16 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	void onEnabledStateChanged()
 	{
 		super.onEnabledStateChanged();
-		visitChildren(new IVisitor<Component, Void>()
-		{
-			@Override
-			public void component(Component component, IVisit<Void> visit)
-			{
-				component.clearEnabledInHierarchyCache();
-			}
-		});
+
+		forEachInHierarchy((o, v) -> o.clearEnabledInHierarchyCache());
 	}
 
 	@Override
 	void onVisibleStateChanged()
 	{
 		super.onVisibleStateChanged();
-		visitChildren(new IVisitor<Component, Void>()
-		{
-			@Override
-			public void component(Component component, IVisit<Void> visit)
-			{
-				component.clearVisibleInHierarchyCache();
-			}
-		});
+
+		forEachInHierarchy((o, v) -> o.clearVisibleInHierarchyCache());
 	}
 
 	@Override

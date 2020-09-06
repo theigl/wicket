@@ -139,10 +139,7 @@ public abstract class AssociatedMarkupSourcingStrategy extends AbstractMarkupSou
 	 */
 	private void cleanChildrenMarkup(MarkupContainer parent) 
 	{
-		for (Component child : parent) 
-		{
-			child.setMarkup(null);
-		}
+		parent.forEach((child, visit) -> child.setMarkup(null));
 	}
 
 	/**
