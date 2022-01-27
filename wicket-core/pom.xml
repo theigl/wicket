@@ -125,7 +125,6 @@
 							<goal>build-classpath</goal>
 						</goals>
 						<configuration>
-							<includeScope>test</includeScope>
 							<outputProperty>depClasspath</outputProperty>
 						</configuration>
 					</execution>
