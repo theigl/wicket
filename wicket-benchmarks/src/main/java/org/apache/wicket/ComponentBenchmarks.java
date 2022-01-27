@@ -42,7 +42,7 @@ public class ComponentBenchmarks
 
 	private static final WicketTester tester = new WicketTester(new MockApplication());
 
-	@Param({ "0", "1", "10", "20", "50" })
+	@Param({ "0", "1", "10", "20", "23", "50", "40", "500" })
 	private int numChildren;
 
 	private MarkupContainer c;
@@ -53,6 +53,21 @@ public class ComponentBenchmarks
 		c = new WebMarkupContainer(ID);
 		IntStream.range(0, numChildren)
 			.forEach(i -> c.add(new WebMarkupContainer(String.valueOf(i))));
+	}
+
+	@Benchmark
+	public void forLoop()
+	{
+		for (Component child : c)
+		{
+			child.setMarkup(null);
+		}
+	}
+
+	@Benchmark
+	public void forEach()
+	{
+		c.forEach((child, o) -> child.setMarkup(null));
 	}
 
 	@Benchmark
@@ -77,21 +92,6 @@ public class ComponentBenchmarks
 	public void visitChildren()
 	{
 		c.visitChildren(new DummyVisitor());
-	}
-
-	@Benchmark
-	public void forLoop()
-	{
-		for (Component child : c)
-		{
-			child.setMarkup(null);
-		}
-	}
-
-	@Benchmark
-	public void forEach()
-	{
-		c.forEach((child, o) -> child.setMarkup(null));
 	}
 
 	public static void main(String[] args) throws RunnerException
