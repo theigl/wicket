@@ -16,6 +16,7 @@
  */
 package org.apache.wicket;
 
+import java.io.IOException;
 import java.util.stream.IntStream;
 
 import org.apache.wicket.markup.html.WebMarkupContainer;
@@ -23,6 +24,7 @@ import org.apache.wicket.mock.MockApplication;
 import org.apache.wicket.util.tester.WicketTester;
 import org.apache.wicket.util.visit.IVisit;
 import org.apache.wicket.util.visit.IVisitor;
+import org.openjdk.jmh.Main;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -94,19 +96,26 @@ public class ComponentBenchmarks
 		c.visitChildren(new DummyVisitor());
 	}
 
-	public static void main(String[] args) throws RunnerException
+	public static void main(String[] args) throws RunnerException, IOException
 	{
-		final Options opt = new OptionsBuilder()
-			.include(".*" + ComponentBenchmarks.class.getSimpleName() + ".*")
-			.warmupIterations(3)
-			.warmupTime(TimeValue.seconds(5))
-			.measurementIterations(3)
-			.measurementTime(TimeValue.seconds(5))
-			.threads(1)
-			//.addProfiler("gc")
-			.forks(5)
-			.build();
-		new Runner(opt).run();
+		if (args.length == 0)
+		{
+			final Options opt = new OptionsBuilder()
+				.include(".*" + ComponentBenchmarks.class.getSimpleName() + ".*")
+				.warmupIterations(3)
+				.warmupTime(TimeValue.seconds(5))
+				.measurementIterations(3)
+				.measurementTime(TimeValue.seconds(5))
+				.threads(1)
+				// .addProfiler("gc")
+				.forks(5)
+				.build();
+			new Runner(opt).run();
+		}
+		else
+		{
+			Main.main(args);
+		}
 	}
 
 	private static class DummyVisitor implements IVisitor<Component, Object>
