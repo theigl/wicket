@@ -99,12 +99,12 @@ public class ComponentBenchmarks
 		final Options opt = new OptionsBuilder()
 			.include(".*" + ComponentBenchmarks.class.getSimpleName() + ".*")
 			.warmupIterations(3)
-			.warmupTime(TimeValue.seconds(2))
+			.warmupTime(TimeValue.seconds(5))
 			.measurementIterations(3)
-			.measurementTime(TimeValue.seconds(2))
+			.measurementTime(TimeValue.seconds(5))
 			.threads(1)
 			//.addProfiler("gc")
-			.forks(2)
+			.forks(5)
 			.build();
 		new Runner(opt).run();
 	}
