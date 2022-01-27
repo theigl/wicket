@@ -114,45 +114,6 @@
 				<groupId>net.alchim31.maven</groupId>
 				<artifactId>yuicompressor-maven-plugin</artifactId>
 			</plugin>
-
-			<plugin>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<version>3.2.0</version>
-				<executions>
-					<execution>
-						<id>build-classpath</id>
-						<goals>
-							<goal>build-classpath</goal>
-						</goals>
-						<configuration>
-							<outputProperty>depClasspath</outputProperty>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
-				<version>3.0.0</version>
-				<executions>
-					<execution>
-						<id>run-tests</id>
-						<goals>
-							<goal>java</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<mainClass>org.apache.wicket.ComponentBenchmarks</mainClass>
-					<systemProperties>
-						<systemProperty>
-							<key>java.class.path</key>
-							<value>${project.build.outputDirectory}${path.separator}${depClasspath}</value>
-						</systemProperty>
-					</systemProperties>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 </project>
