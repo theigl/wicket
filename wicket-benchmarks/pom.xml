@@ -70,7 +70,6 @@
 							<goal>build-classpath</goal>
 						</goals>
 						<configuration>
-							<includeScope>runtime</includeScope>
 							<outputProperty>depClasspath</outputProperty>
 						</configuration>
 					</execution>
