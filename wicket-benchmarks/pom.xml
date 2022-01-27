@@ -49,6 +49,7 @@
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.openjdk.jmh</groupId>
@@ -74,6 +75,7 @@
 							<goal>build-classpath</goal>
 						</goals>
 						<configuration>
+							<includeScope>runtime</includeScope>
 							<outputProperty>depClasspath</outputProperty>
 						</configuration>
 					</execution>
