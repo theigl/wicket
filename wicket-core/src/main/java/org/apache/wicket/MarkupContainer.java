@@ -654,14 +654,11 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 
 			private void refreshInternalIteratorIfNeeded()
 			{
-				if (modCounter > expectedModCounter)
-				{
-					refresh();
+				if (expectedModCounter >= modCounter) {
+					// no new modifications
+					return;
 				}
-			}
 
-			private void refresh()
-			{
 				if (children == null)
 				{
 					internalIterator = Collections.emptyIterator();

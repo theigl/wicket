@@ -44,7 +44,7 @@ public class ComponentBenchmarks
 
 	private static final WicketTester tester = new WicketTester(new MockApplication());
 
-	@Param({ "500" })
+	@Param({ "0", "1", "10", "20", "23", "50", "40", "500" })
 	private int numChildren;
 
 	private MarkupContainer c;
