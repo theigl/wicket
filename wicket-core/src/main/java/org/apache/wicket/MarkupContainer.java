@@ -17,7 +17,6 @@
 package org.apache.wicket;
 
 import java.io.Serializable;
-import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1118,9 +1117,8 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	}
 
 	/**
-	 * This implementation is significantly faster and almost allocation free for containers with up
-	 * to {@link #MAPIFY_THRESHOLD} children. It loops over the children without creating an
-	 * {@link #iterator()}.
+	 * This implementation is significantly faster and almost allocation free for containers with up to
+	 * {@link #MAPIFY_THRESHOLD} children. It loops over the children without createing an {@link #iterator()}.
 	 */
 	private static  <S extends Component, R> void visitList(MarkupContainer c, IVisitor<S, R> visitor,
 															IVisitFilter filter, Visit<R> visit)
@@ -1249,21 +1247,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		{
 			return children();
 		}
-		final LinkedMap<String, Component> children = this.children();
-		return new AbstractList<>()
-		{
-			@Override
-			public Component get(int index)
-			{
-				return children.getValue(index);
-			}
-
-			@Override
-			public int size()
-			{
-				return children.size();
-			}
-		};
+		return new ArrayList<>(this.<LinkedMap<String, Component>>children().values());
 	}
 
 	/**
