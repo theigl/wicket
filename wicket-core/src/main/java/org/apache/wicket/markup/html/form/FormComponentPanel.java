@@ -146,7 +146,7 @@ public abstract class FormComponentPanel<T> extends FormComponent<T> implements 
 	@Override
 	protected IMarkupSourcingStrategy newMarkupSourcingStrategy()
 	{
-		return PanelMarkupSourcingStrategy.get(false);
+		return PanelMarkupSourcingStrategy.getInstance(PanelMarkupSourcingStrategy.PanelType.PANEL);
 	}
 
 	@Override

@@ -33,26 +33,64 @@ import org.apache.wicket.markup.MarkupStream;
  */
 public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrategy
 {
-	private static final PanelMarkupSourcingStrategy PANEL_INSTANCE = new PanelMarkupSourcingStrategy(
-		false);
-	private static final PanelMarkupSourcingStrategy BORDER_INSTANCE = new PanelMarkupSourcingStrategy(
-		true);
+	public enum PanelType 
+	{
+		PANEL(false),
+		BORDER(true);
 
-	// False for Panel and true for Border components.
-	private final boolean allowWicketComponentsInBodyMarkup;
+		private final boolean allowWicketComponentsInBodyMarkup;
+		private final PanelMarkupSourcingStrategy instance;
+
+		PanelType(boolean allowWicketComponentsInBodyMarkup) 
+		{
+			this.allowWicketComponentsInBodyMarkup = allowWicketComponentsInBodyMarkup;
+			this.instance = new PanelMarkupSourcingStrategy(this);
+		}
+
+		private boolean isAllowWicketComponentsInBodyMarkup() 
+		{
+			return allowWicketComponentsInBodyMarkup;
+		}
+
+		private PanelMarkupSourcingStrategy getInstance() {
+			return instance;
+		}
+	}
+
+	private final PanelType panelType;
+
+	public static PanelMarkupSourcingStrategy getInstance(PanelType type)
+	{
+		return type.getInstance();
+	}
 
 	/**
-	 * @param allowWicketComponentsInBodyMarkup
-	 *            {@code false} for Panel and {@code true} for Border components. If Panel then the
-	 *            body markup should only contain raw markup, which is ignored (removed), but no
-	 *            Wicket Component. With Border components, the body markup will be associated with
-	 *            the Body Component.
-	 * 
-	 * @return A singleton of the strategy
+	 * Constructor.
+	 *
+	 * @param wicketTagName
+	 *            The tag name for <code>&lt;wicket:'name' ..&gt;</code>. Please note that any such
+	 *            tag must have been registered via
+	 *            <code>WicketTagIdentifier.registerWellKnownTagName("name");</code>
+	 * @param panelType
+	 *            The panel type
 	 */
-	public static PanelMarkupSourcingStrategy get(final boolean allowWicketComponentsInBodyMarkup)
+	public PanelMarkupSourcingStrategy(final String wicketTagName,
+									   final PanelType panelType)
 	{
-		return allowWicketComponentsInBodyMarkup ? BORDER_INSTANCE : PANEL_INSTANCE;
+		super(wicketTagName);
+
+		this.panelType = panelType;
+	}
+
+	/**
+	 * Constructor.
+	 *
+	 * @param panelType
+	 *            The panel type
+	 */
+	public PanelMarkupSourcingStrategy(final PanelType panelType)
+	{
+		this(Panel.PANEL, panelType);
 	}
 
 	/**
@@ -68,12 +106,11 @@ public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrateg
 	 *            Wicket Component. With Border components, the body markup will be associated with
 	 *            the Body Component.
 	 */
+	@Deprecated(since = "9.10.0", forRemoval = true)
 	public PanelMarkupSourcingStrategy(final String wicketTagName,
 		final boolean allowWicketComponentsInBodyMarkup)
 	{
-		super(wicketTagName);
-
-		this.allowWicketComponentsInBodyMarkup = allowWicketComponentsInBodyMarkup;
+		this(wicketTagName, allowWicketComponentsInBodyMarkup ? PanelType.BORDER : PanelType.PANEL);
 	}
 
 	/**
@@ -85,6 +122,7 @@ public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrateg
 	 *            Wicket Component. With Border components, the body markup will be associated with
 	 *            the Body Component.
 	 */
+	@Deprecated(since = "9.10.0", forRemoval = true)
 	public PanelMarkupSourcingStrategy(final boolean allowWicketComponentsInBodyMarkup)
 	{
 		this(Panel.PANEL, allowWicketComponentsInBodyMarkup);
@@ -99,7 +137,7 @@ public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrateg
 	public void onComponentTagBody(final Component component, final MarkupStream markupStream,
 		final ComponentTag openTag)
 	{
-		if (allowWicketComponentsInBodyMarkup)
+		if (panelType.isAllowWicketComponentsInBodyMarkup())
 		{
 			// Skip the body markup. Will be picked up by the Body component.
 			markupStream.skipToMatchingCloseTag(openTag);
@@ -111,7 +149,7 @@ public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrateg
 			if (markupStream.getPreviousTag().isOpen())
 			{
 				markupStream.skipRawMarkup();
-				if (markupStream.get().closes(openTag) == false)
+				if (!markupStream.get().closes(openTag))
 				{
 					StringBuilder msg = new StringBuilder();
 
@@ -121,7 +159,7 @@ public class PanelMarkupSourcingStrategy extends AssociatedMarkupSourcingStrateg
 						.append(component.getClass().getSimpleName())
 						.append(" Components only raw markup is allow in between the tags but not ")
 						.append("other Wicket Component. Component: ")
-						.append(component.toString());
+						.append(component);
 
 					throw new MarkupException(markupStream, msg.toString());
 				}
