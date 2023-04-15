@@ -41,23 +41,24 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.ReadListener;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Part;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
 
-import org.apache.commons.fileupload.FileUploadBase;
+import org.apache.commons.fileupload2.FileUploadBase;
 import org.apache.wicket.Application;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.mock.MockRequestParameters;
@@ -888,21 +889,6 @@ public class MockHttpServletRequest implements HttpServletRequest
 	}
 
 	/**
-	 * Deprecated method - should not be used.
-	 * 
-	 * @param name
-	 *            The name
-	 * @return The path
-	 * @deprecated Use ServletContext.getRealPath(String) instead.
-	 */
-	@Override
-	@Deprecated
-	public String getRealPath(String name)
-	{
-		return context.getRealPath(name);
-	}
-
-	/**
 	 * @return the remote address of the client
 	 */
 	@Override
@@ -977,7 +963,7 @@ public class MockHttpServletRequest implements HttpServletRequest
 	 * /applicationClassName/applicationClassName
 	 * 
 	 * @return The path value
-	 * @see javax.servlet.http.HttpServletRequest#getRequestURI()
+	 * @see jakarta.servlet.http.HttpServletRequest#getRequestURI()
 	 */
 	@Override
 	public String getRequestURI()
@@ -1001,7 +987,7 @@ public class MockHttpServletRequest implements HttpServletRequest
 	 * Try to build a rough URL.
 	 * 
 	 * @return The url
-	 * @see javax.servlet.http.HttpServletRequest#getRequestURL()
+	 * @see jakarta.servlet.http.HttpServletRequest#getRequestURL()
 	 */
 	@Override
 	public StringBuffer getRequestURL()
@@ -1215,17 +1201,6 @@ public class MockHttpServletRequest implements HttpServletRequest
 	public boolean isRequestedSessionIdFromCookie()
 	{
 		return true;
-	}
-
-	/**
-	 * Check whether session id is from a url rewrite. Always returns false.
-	 * 
-	 * @return Always false
-	 */
-	@Override
-	public boolean isRequestedSessionIdFromUrl()
-	{
-		return false;
 	}
 
 	@Override
@@ -1769,6 +1744,21 @@ public class MockHttpServletRequest implements HttpServletRequest
 	@Override
 	public DispatcherType getDispatcherType()
 	{
+		return null;
+	}
+
+	@Override
+	public String getRequestId() {
+		return null;
+	}
+
+	@Override
+	public String getProtocolRequestId() {
+		return null;
+	}
+
+	@Override
+	public ServletConnection getServletConnection() {
 		return null;
 	}
 

@@ -20,30 +20,32 @@
 	<parent>
 		<groupId>org.apache.wicket</groupId>
 		<artifactId>wicket-native-websocket</artifactId>
-		<version>9.1.0-SNAPSHOT</version>
+		<version>10.0.0-M1-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>wicket-native-websocket-javax</artifactId>
 	<packaging>bundle</packaging>
 	<name>Wicket Native WebSocket Javax</name>
 	<description>Provides the common code needed for the different integrations with web container's WebSocket implementations</description>
-
 	<properties>
-		<automatic-module-name>org.apache.wicket.websocket.javax</automatic-module-name>
+		<osgi.export.package>org.apache.wicket.protocol.ws.javax*;-noimport:=true</osgi.export.package>
+		<osgi.import.package>!java*,!kotlin*,!sun.nio.ch,org.slf4j*;version="[1.7,3)",*</osgi.import.package>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>jakarta.interceptor</groupId>
+				<artifactId>jakarta.interceptor-api</artifactId>
+				<version>2.0.0</version>
+				<scope>provided</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
 			<groupId>jakarta.websocket</groupId>
 			<artifactId>jakarta.websocket-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>javax.servlet-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.wicket</groupId>
-			<artifactId>wicket-core</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.wicket</groupId>
@@ -59,12 +61,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty.websocket</groupId>
-			<artifactId>javax-websocket-server-impl</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<scope>test</scope>
+			<artifactId>websocket-jakarta-server</artifactId>
 		</dependency>
 	</dependencies>
 </project>

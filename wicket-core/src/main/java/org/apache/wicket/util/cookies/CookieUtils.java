@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
-import javax.servlet.http.Cookie;
+import jakarta.servlet.http.Cookie;
 import org.apache.wicket.markup.html.form.FormComponent;
 import org.apache.wicket.protocol.http.WebApplication;
 import org.apache.wicket.protocol.http.servlet.ServletWebRequest;
@@ -266,9 +266,9 @@ public class CookieUtils
 	 * Gets the name of the cookie where the session id is stored.
 	 *
 	 * @param application
-	 *            The current we application holding the {@link javax.servlet.ServletContext}.
+	 *            The current we application holding the {@link jakarta.servlet.ServletContext}.
 	 *
-	 * @return The name set in {@link javax.servlet.SessionCookieConfig} or the default value 'JSESSIONID' if not set
+	 * @return The name set in {@link jakarta.servlet.SessionCookieConfig} or the default value 'JSESSIONID' if not set
 	 */
 	public String getSessionIdCookieName(WebApplication application)
 	{
@@ -328,11 +328,17 @@ public class CookieUtils
 		String path = request.getContainerRequest().getContextPath() + "/" +
 			request.getFilterPrefix();
 
+		if (settings.getSameSite() == CookieDefaults.SameSite.None)
+		{
+			settings.setSecure(true);
+		}
+
 		cookie.setPath(path);
 		cookie.setVersion(settings.getVersion());
 		cookie.setSecure(settings.getSecure());
 		cookie.setMaxAge(settings.getMaxAge());
 		cookie.setHttpOnly(settings.isHttpOnly());
+		cookie.setAttribute("SameSite", settings.getSameSite().name());
 	}
 
 	/**

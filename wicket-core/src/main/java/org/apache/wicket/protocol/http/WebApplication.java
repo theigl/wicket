@@ -24,11 +24,6 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.function.Function;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
 import org.apache.wicket.Application;
 import org.apache.wicket.Page;
 import org.apache.wicket.RuntimeConfigurationType;
@@ -90,6 +85,11 @@ import org.apache.wicket.util.watch.IModificationWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 
 /**
  * A web application is a subclass of Application which associates with an instance of WicketServlet
@@ -103,7 +103,7 @@ import org.slf4j.LoggerFactory;
  * the constructor itself because the defaults will then override your settings.
  * <p>
  * If you want to use a filter specific configuration, e.g. using init parameters from the
- * {@link javax.servlet.FilterConfig} object, you should override the init() method. For example:
+ * {@link jakarta.servlet.FilterConfig} object, you should override the init() method. For example:
  * 
  * <pre>
  *  public void init() {
@@ -121,9 +121,9 @@ import org.slf4j.LoggerFactory;
  * @see org.apache.wicket.settings.RequestCycleSettings
  * @see org.apache.wicket.settings.ResourceSettings
  * @see org.apache.wicket.settings.SecuritySettings
- * @see javax.servlet.Filter
- * @see javax.servlet.FilterConfig
- * @see javax.servlet.ServletContext
+ * @see jakarta.servlet.Filter
+ * @see jakarta.servlet.FilterConfig
+ * @see jakarta.servlet.ServletContext
  * 
  * @author Jonathan Locke
  * @author Chris Turner
@@ -646,19 +646,12 @@ public abstract class WebApplication extends Application
 		return shouldBufferResponse ? new HeaderBufferingWebResponse(webResponse) : webResponse;
 	}
 
-	/**
-	 * @see org.apache.wicket.Application#newSession(org.apache.wicket.request.Request,
-	 *      org.apache.wicket.request.Response)
-	 */
 	@Override
 	public Session newSession(Request request, Response response)
 	{
 		return new WebSession(request);
 	}
 
-	/**
-	 * @see org.apache.wicket.Application#sessionUnbound(java.lang.String)
-	 */
 	@Override
 	public void sessionUnbound(final String sessionId)
 	{
@@ -724,9 +717,9 @@ public abstract class WebApplication extends Application
 	 * 
 	 * Internal initialization. First determine the deployment mode. First check the system property
 	 * -Dwicket.configuration. If it does not exist check the servlet init parameter (
-	 * <code>&lt;init-param&gt&lt;param-name&gt;configuration&lt;/param-name&gt;</code>). If not
+	 * <code>&lt;init-param&gt;&lt;param-name&gt;configuration&lt;/param-name&gt;</code>). If not
 	 * found check the servlet context init parameter
-	 * <code>&lt;context-param&gt&lt;param-name6gt;configuration&lt;/param-name&gt;</code>). If the
+	 * <code>&lt;context-param&gt;&lt;param-name6gt;configuration&lt;/param-name&gt;</code>). If the
 	 * parameter is "development" (which is default), settings appropriate for development are set.
 	 * If it's "deployment" , deployment settings are used. If development is specified and a
 	 * "sourceFolder" init parameter is also set, then resources in that folder will be polled for
@@ -758,8 +751,10 @@ public abstract class WebApplication extends Application
 		setSessionStoreProvider(HttpSessionStore::new);
 		setAjaxRequestTargetProvider(AjaxRequestHandler::new);
 
-		getAjaxRequestTargetListeners().add(new AjaxEnclosureListener());
-		
+		AjaxRequestTargetListenerCollection ajaxRequestTargetListeners = getAjaxRequestTargetListeners();
+		ajaxRequestTargetListeners.add(new AjaxEnclosureListener());
+		ajaxRequestTargetListeners.add(new MultipartFormComponentListener());
+
 		// Configure the app.
 		configure();
 		if (getConfigurationType() == RuntimeConfigurationType.DEVELOPMENT)
@@ -1111,16 +1106,6 @@ public abstract class WebApplication extends Application
 	}
 	
 	/**
-	 * TODO remove in Wicket 10
-	 * 
-	 * @deprecated use {@link #setCspSettings(ContentSecurityPolicySettings)} instead
-	 */
-	protected ContentSecurityPolicySettings newCspSettings()
-	{
-		return new ContentSecurityPolicySettings(this);
-	}
-
-	/**
 	 * Returns the {@link ContentSecurityPolicySettings} for this application. See
 	 * {@link ContentSecurityPolicySettings} and {@link CSPHeaderConfiguration} for instructions on
 	 * configuring the CSP for your specific needs.
@@ -1128,16 +1113,14 @@ public abstract class WebApplication extends Application
 	 * @return The {@link ContentSecurityPolicySettings} for this application.
 	 * @see ContentSecurityPolicySettings
 	 * @see CSPHeaderConfiguration
-	 * 
-	 * TODO make final in Wicket 10
 	 */
-	public ContentSecurityPolicySettings getCspSettings()
+	public final ContentSecurityPolicySettings getCspSettings()
 	{
 		checkSettingsAvailable();
 
 		if (cspSettings == null)
 		{
-			cspSettings = newCspSettings();
+			cspSettings = new ContentSecurityPolicySettings(this);
 		}
 		return cspSettings;
 	}

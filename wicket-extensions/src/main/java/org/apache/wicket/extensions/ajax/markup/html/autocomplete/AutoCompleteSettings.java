@@ -24,6 +24,7 @@ import org.apache.wicket.util.io.IClusterable;
  * <p>
  * Default settings:
  * <table>
+ * <caption>Default settings</caption>
  * <tr>
  * <th>setting</th>
  * <th>default value</th>
@@ -326,9 +327,7 @@ public final class AutoCompleteSettings implements IClusterable
 	/**
 	 * Sets whether the popup positioning will take into account browser window visible area or not.
 	 * (so always show popup bottom-right or not)<br>
-	 * THIS WILL PRODUCE UNWANTED BEHAVIOR WITH IE versions < 8 (probably because of unreliable
-	 * clientWidth/clientHeight browser element properties).
-	 * 
+	 *
 	 * @param useSmartPositioning
 	 *            the flag
 	 * @return this {@link AutoCompleteSettings}.

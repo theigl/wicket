@@ -184,7 +184,7 @@ public abstract class AjaxLazyLoadPanel<T extends Component> extends Panel
 	 * Since all LazyLoadingPanels on a page share the same Ajax timer, its update interval
 	 * is derived from the minimum of all panel's update intervals.
 	 * 
-	 * @return update interval, must not be {@value null}
+	 * @return update interval, must not be {@code null}
 	 */
 	protected Duration getUpdateInterval() {
 		return Duration.ofSeconds(1);
@@ -211,7 +211,8 @@ public abstract class AjaxLazyLoadPanel<T extends Component> extends Panel
 				T content = getLazyLoadComponent(CONTENT_ID);
 
 				// replace the loading component with the new component
-				AjaxLazyLoadPanel.this.replace(content);
+				// note: use addOrReplace(), since onConfigure() might not have been called yet 
+				AjaxLazyLoadPanel.this.addOrReplace(content);
 
 				Optional<AjaxRequestTarget> target = getRequestCycle().find(AjaxRequestTarget.class);
 

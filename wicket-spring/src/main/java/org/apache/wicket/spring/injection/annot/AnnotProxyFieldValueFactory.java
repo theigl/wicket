@@ -24,8 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import org.apache.wicket.injection.IFieldValueFactory;
 import org.apache.wicket.proxy.LazyInitProxyFactory;
@@ -64,13 +64,13 @@ import org.springframework.core.ResolvableType;
  * IDependency bean from spring context upon first access to one of the methods.
  * <p>
  * This class will also cache any produced proxies so that the same proxy is always returned for the
- * same spring dependency. This helps cut down on session size beacause proxies for the same
+ * same spring dependency. This helps cut down on session size because proxies for the same
  * dependency will not be serialized twice.
  * 
  * @see LazyInitProxyFactory
  * @see SpringBean
  * @see SpringBeanLocator
- * @see javax.inject.Inject
+ * @see jakarta.inject.Inject
  * 
  * @author Igor Vaynberg (ivaynberg)
  * @author Istvan Devai
@@ -287,7 +287,7 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 			msg.append("More than one bean of type [");
 			msg.append(clazz.getName());
 			msg.append("] found, you have to specify the name of the bean ");
-			msg.append("(@SpringBean(name=\"foo\")) or (@Named(\"foo\") if using @javax.inject classes) in order to resolve this conflict. ");
+			msg.append("(@SpringBean(name=\"foo\")) or (@Named(\"foo\") if using @jakarta.inject classes) in order to resolve this conflict. ");
 			msg.append("Matched beans: ");
 			msg.append(Strings.join(",", names));
 			throw new IllegalStateException(msg.toString());

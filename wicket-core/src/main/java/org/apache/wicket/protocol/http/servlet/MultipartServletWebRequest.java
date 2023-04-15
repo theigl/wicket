@@ -19,10 +19,10 @@ package org.apache.wicket.protocol.http.servlet;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload2.FileItem;
+import org.apache.commons.fileupload2.FileUploadException;
 import org.apache.wicket.protocol.http.IMultipartWebRequest;
 import org.apache.wicket.request.IRequestParameters;
 import org.apache.wicket.request.Url;
@@ -31,7 +31,7 @@ import org.apache.wicket.util.lang.Bytes;
 
 /**
  * Servlet specific WebRequest subclass for multipart content uploads.
- * 
+ *
  * @author Matej Knopp
  */
 public abstract class MultipartServletWebRequest extends ServletWebRequest
@@ -49,8 +49,14 @@ public abstract class MultipartServletWebRequest extends ServletWebRequest
 	private Bytes fileMaxSize;
 
 	/**
+	 * Maximum amount of files in request.
+	 * A value of -1 indicates no maximum.
+	 */
+	private long fileCountMax = -1L;
+
+	/**
 	 * Construct.
-	 * 
+	 *
 	 * @param httpServletRequest
 	 * @param filterPrefix
 	 */
@@ -61,7 +67,7 @@ public abstract class MultipartServletWebRequest extends ServletWebRequest
 
 	/**
 	 * Construct.
-	 * 
+	 *
 	 * @param httpServletRequest
 	 * @param filterPrefix
 	 * @param url
@@ -130,5 +136,15 @@ public abstract class MultipartServletWebRequest extends ServletWebRequest
 	public void setFileMaxSize(Bytes fileMaxSize)
 	{
 		this.fileMaxSize = fileMaxSize;
+	}
+
+	public long getFileCountMax()
+	{
+		return fileCountMax;
+	}
+
+	public void setFileCountMax(long fileCountMax)
+	{
+		this.fileCountMax = fileCountMax;
 	}
 }

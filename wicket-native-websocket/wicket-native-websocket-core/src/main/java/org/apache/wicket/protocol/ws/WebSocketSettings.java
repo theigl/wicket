@@ -21,6 +21,8 @@ import org.apache.wicket.MetaDataKey;
 import org.apache.wicket.Page;
 import org.apache.wicket.protocol.ws.api.IWebSocketConnection;
 import org.apache.wicket.protocol.ws.api.IWebSocketConnectionFilter;
+import org.apache.wicket.protocol.ws.api.IWebSocketSession;
+import org.apache.wicket.protocol.ws.api.IWebSocketSessionConfigurer;
 import org.apache.wicket.protocol.ws.api.ServletRequestCopy;
 import org.apache.wicket.protocol.ws.api.WebSocketConnectionFilterCollection;
 import org.apache.wicket.protocol.ws.api.WebSocketRequest;
@@ -38,7 +40,7 @@ import org.apache.wicket.util.string.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -138,6 +140,17 @@ public class WebSocketSettings
 	private IWebSocketConnectionFilter connectionFilter;
 
 	/**
+	 * A {@link org.apache.wicket.protocol.ws.api.IWebSocketSessionConfigurer} that allows to configure
+	 * {@link org.apache.wicket.protocol.ws.api.IWebSocketSession}s.
+	 */
+	private IWebSocketSessionConfigurer socketSessionConfigurer = new IWebSocketSessionConfigurer() {
+		@Override
+		public void configureSession(IWebSocketSession webSocketSession) {
+			// does nothing by default
+		}
+	};
+
+	/**
 	 * A function that decides whether to notify the page/resource on
 	 * web socket connection closed event.
 	 * The page notification leads to deserialization of the page instance from
@@ -145,11 +158,24 @@ public class WebSocketSettings
 	 */
 	private Function<Integer, Boolean> notifyOnCloseEvent = (code) -> true;
 
-	public boolean shouldNotifyOnCloseEvent(int closeCode) {
+	/**
+	 * Flag that allows to use asynchronous push. By default, it is set to <code>false</code>.
+	 */
+	private boolean asynchronousPush = false;
+
+	/**
+	 * The timeout to use for asynchronous push. By default, it is -1 which means use timeout configured by
+	 * server implementation.
+	 */
+	private long asynchronousPushTimeout = -1;
+
+	public boolean shouldNotifyOnCloseEvent(int closeCode)
+	{
 		return notifyOnCloseEvent == null || notifyOnCloseEvent.apply(closeCode);
 	}
 
-	public void setNotifyOnCloseEvent(Function<Integer, Boolean> notifyOnCloseEvent) {
+	public void setNotifyOnCloseEvent(Function<Integer, Boolean> notifyOnCloseEvent)
+	{
 		this.notifyOnCloseEvent = notifyOnCloseEvent;
 	}
 
@@ -161,11 +187,13 @@ public class WebSocketSettings
 	 */
 	private Function<Throwable, Boolean> notifyOnErrorEvent = (throwable) -> true;
 
-	public boolean shouldNotifyOnErrorEvent(Throwable throwable) {
+	public boolean shouldNotifyOnErrorEvent(Throwable throwable)
+	{
 		return notifyOnErrorEvent == null || notifyOnErrorEvent.apply(throwable);
 	}
 
-	public void setNotifyOnErrorEvent(Function<Throwable, Boolean> notifyOnErrorEvent) {
+	public void setNotifyOnErrorEvent(Function<Throwable, Boolean> notifyOnErrorEvent)
+	{
 		this.notifyOnErrorEvent = notifyOnErrorEvent;
 	}
 
@@ -246,6 +274,22 @@ public class WebSocketSettings
 	}
 
 	/**
+	 * Sets the IWebSocketSessionConfigurer
+	 * @param socketSessionConfigurer A non-null {@link org.apache.wicket.protocol.ws.api.IWebSocketSessionConfigurer}
+	 */
+	public void setSocketSessionConfigurer(IWebSocketSessionConfigurer socketSessionConfigurer) {
+		Args.notNull(socketSessionConfigurer, "socketSessionConfigurer");
+		this.socketSessionConfigurer = socketSessionConfigurer;
+	}
+
+	/**
+	 * @return returns the {@link org.apache.wicket.protocol.ws.api.IWebSocketSessionConfigurer}
+	 */
+	public IWebSocketSessionConfigurer getSocketSessionConfigurer() {
+		return socketSessionConfigurer;
+	}
+
+	/**
 	 * Sets the filter for checking the incoming connections
 	 *
 	 * @param connectionFilter
@@ -276,7 +320,24 @@ public class WebSocketSettings
 	 */
 	public WebResponse newWebSocketResponse(IWebSocketConnection connection)
 	{
-		return new WebSocketResponse(connection);
+		return newWebSocketResponse(connection, isAsynchronousPush(), getAsynchronousPushTimeout());
+	}
+
+	/**
+	 * A factory method for the {@link org.apache.wicket.request.http.WebResponse}
+	 * that should be used to write the response back to the client/browser
+	 *
+	 * @param connection
+	 *              The active web socket connection
+	 * @param asynchronousPush
+	 *              Whether asynchronous push is wanted or not.
+     * @param timeout
+     *              The timeout to be used for push operations
+	 * @return the response object that should be used to write the response back to the client
+	 */
+	public WebResponse newWebSocketResponse(IWebSocketConnection connection, boolean asynchronousPush, long timeout)
+	{
+		return new WebSocketResponse(connection, asynchronousPush, timeout);
 	}
 
 	/**
@@ -467,5 +528,25 @@ public class WebSocketSettings
 		{
 			return new Thread(r, "Wicket-WebSocket-HttpRequest-Thread-" + counter.getAndIncrement());
 		}
+	}
+
+	public void setAsynchronousPush(boolean asynchronousPush)
+	{
+		this.asynchronousPush = asynchronousPush;
+	}
+
+	public boolean isAsynchronousPush()
+	{
+		return asynchronousPush;
+	}
+
+	public void setAsynchronousPushTimeout(long asynchronousPushTimeout)
+	{
+		this.asynchronousPushTimeout = asynchronousPushTimeout;
+	}
+
+	public long getAsynchronousPushTimeout()
+	{
+		return asynchronousPushTimeout;
 	}
 }

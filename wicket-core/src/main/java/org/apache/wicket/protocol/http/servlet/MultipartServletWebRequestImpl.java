@@ -18,24 +18,23 @@ package org.apache.wicket.protocol.http.servlet;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.Part;
-
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.FileUploadBase;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.servlet.ServletRequestContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Part;
+import org.apache.commons.fileupload2.FileItem;
+import org.apache.commons.fileupload2.FileItemFactory;
+import org.apache.commons.fileupload2.FileUploadBase;
+import org.apache.commons.fileupload2.FileUploadException;
+import org.apache.commons.fileupload2.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload2.jaksrvlt.JakSrvltFileUpload;
+import org.apache.commons.fileupload2.jaksrvlt.JakSrvltRequestContext;
+import org.apache.commons.fileupload2.pub.FileUploadByteCountLimitException;
 import org.apache.commons.io.FileCleaningTracker;
 import org.apache.wicket.Application;
 import org.apache.wicket.WicketRuntimeException;
@@ -48,7 +47,7 @@ import org.apache.wicket.util.value.ValueMap;
 
 /**
  * Servlet specific WebRequest subclass for multipart content uploads.
- * 
+ *
  * @author Jonathan Locke
  * @author Eelco Hillenius
  * @author Cameron Braid
@@ -91,7 +90,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 	 *             Thrown if something goes wrong with upload
 	 */
 	public MultipartServletWebRequestImpl(HttpServletRequest request, String filterPrefix,
-		Bytes maxSize, String upload) throws FileUploadException
+										  Bytes maxSize, String upload) throws FileUploadException
 	{
 		this(request, filterPrefix, maxSize, upload, new DiskFileItemFactory()
 		{
@@ -135,11 +134,11 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 		files = new HashMap<>();
 
 		// Check that request is multipart
-		final boolean isMultipart = ServletFileUpload.isMultipartContent(request);
+		final boolean isMultipart = JakSrvltFileUpload.isMultipartContent(request);
 		if (!isMultipart)
 		{
 			throw new IllegalStateException(
-				"ServletRequest does not contain multipart content. One possible solution is to explicitly call Form.setMultipart(true), Wicket tries its best to auto-detect multipart forms but there are certain situation where it cannot.");
+				"ServletRequest does not contain multipart content. One possible solution is to explicitly call Form.setMultipart(true), Wicket tries its best to auto-detect multipart forms but there are certain situations where it cannot.");
 		}
 
 		setMaxSize(maxSize);
@@ -169,7 +168,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 		if (wantUploadProgressUpdates())
 		{
-			ServletRequestContext ctx = new ServletRequestContext(request)
+			JakSrvltRequestContext ctx = new JakSrvltRequestContext(request)
 			{
 				@Override
 				public InputStream getInputStream() throws IOException
@@ -193,7 +192,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 		{
 			// try to parse the file uploads by using Apache Commons FileUpload APIs
 			// because they are feature richer (e.g. progress updates, cleaner)
-			items = fileUpload.parseRequest(new ServletRequestContext(request));
+			items = fileUpload.parseRequest(new JakSrvltRequestContext(request));
 			if (items.isEmpty())
 			{
 				// fallback to Servlet 3.0 APIs
@@ -216,7 +215,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 					{
 						value = item.getString(encoding);
 					}
-					catch (UnsupportedEncodingException e)
+					catch (IOException e)
 					{
 						throw new WicketRuntimeException(e);
 					}
@@ -283,7 +282,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 	 */
 	protected FileUploadBase newFileUpload(String encoding) {
 		// Configure the factory here, if desired.
-		ServletFileUpload fileUpload = new ServletFileUpload(fileItemFactory);
+		JakSrvltFileUpload fileUpload = new JakSrvltFileUpload(fileItemFactory);
 
 		// set encoding specifically when we found it
 		if (encoding != null)
@@ -298,12 +297,14 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 			fileUpload.setFileSizeMax(fileMaxSize.bytes());
 		}
 
+		fileUpload.setFileCountMax(getFileCountMax());
+
 		return fileUpload;
 	}
 
     /**
 	 * Adds a parameter to the parameters value map
-	 * 
+	 *
 	 * @param name
 	 *            parameter name
 	 * @param value
@@ -341,7 +342,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Gets the file that was uploaded using the given field name.
-	 * 
+	 *
 	 * @param fieldName
 	 *            the field name that was used for the upload
 	 * @return the upload with the given field name
@@ -374,9 +375,9 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 	}
 
 	/**
-	 * Subclasses that want to receive upload notifications should return true. By default it takes
+	 * Subclasses that want to receive upload notifications should return true. By default, it takes
 	 * the value from {@link org.apache.wicket.settings.ApplicationSettings#isUploadProgressUpdatesEnabled()}.
-	 * 
+	 *
 	 * @return true if upload status update event should be invoked
 	 */
 	protected boolean wantUploadProgressUpdates()
@@ -386,7 +387,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Upload start callback
-	 * 
+	 *
 	 * @param totalBytes
 	 */
 	protected void onUploadStarted(int totalBytes)
@@ -398,7 +399,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Upload status update callback
-	 * 
+	 *
 	 * @param bytesUploaded
 	 * @param total
 	 */
@@ -426,7 +427,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * An {@link InputStream} that updates total number of bytes read
-	 * 
+	 *
 	 * @author Igor Vaynberg (ivaynberg)
 	 */
 	private class CountingInputStream extends InputStream
@@ -436,7 +437,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 		/**
 		 * Constructs a new CountingInputStream.
-		 * 
+		 *
 		 * @param in
 		 *            InputStream to delegate to
 		 */
@@ -445,9 +446,6 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 			this.in = in;
 		}
 
-		/**
-		 * @see java.io.InputStream#read()
-		 */
 		@Override
 		public int read() throws IOException
 		{
@@ -457,9 +455,6 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 			return read;
 		}
 
-		/**
-		 * @see java.io.InputStream#read(byte[])
-		 */
 		@Override
 		public int read(byte[] b) throws IOException
 		{
@@ -469,9 +464,6 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 			return read;
 		}
 
-		/**
-		 * @see java.io.InputStream#read(byte[], int, int)
-		 */
 		@Override
 		public int read(byte[] b, int off, int len) throws IOException
 		{
@@ -501,9 +493,9 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 				if (fileMaxSize != null && fileItem.getSize() > fileMaxSize.bytes())
 				{
 					String fieldName = entry.getKey();
-					FileUploadException fslex = new FileUploadBase.FileSizeLimitExceededException("The field '" +
+					FileUploadException fslex = new FileUploadByteCountLimitException("The field '" +
 							fieldName + "' exceeds its maximum permitted size of '" +
-							maxSize + "' characters.", fileItem.getSize(), fileMaxSize.bytes());
+							maxSize + "' characters.", fileItem.getSize(), fileMaxSize.bytes(), fileItem.getName(), fieldName);
 					throw fslex;
 				}
 			}
@@ -527,7 +519,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Retrieves {@link UploadInfo} from session, null if not found.
-	 * 
+	 *
 	 * @param req
 	 *            http servlet request, not null
 	 * @param upload
@@ -542,7 +534,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Sets the {@link UploadInfo} object into session.
-	 * 
+	 *
 	 * @param req
 	 *            http servlet request, not null
 	 * @param upload
@@ -561,7 +553,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 	/**
 	 * Clears the {@link UploadInfo} object from session if one exists.
-	 * 
+	 *
 	 * @param req
 	 *            http servlet request, not null
 	 * @param upload

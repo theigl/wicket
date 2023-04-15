@@ -117,18 +117,15 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 	{
 		private final Set<String> triedKeys = new LinkedHashSet<>();
 
-		/**
-		 * @see org.apache.wicket.validation.IErrorMessageSource#getMessage(String, java.util.Map)
-		 */
 		@Override
 		public String getMessage(String key, Map<String, Object> vars)
 		{
 			final FormComponent<T> formComponent = FormComponent.this;
 
-			// Use the following log4j config for detailed logging on the property resolution
-			// process
-			// log4j.logger.org.apache.wicket.resource.loader=DEBUG
-			// log4j.logger.org.apache.wicket.Localizer=DEBUG
+			// Use the following slf4j-simple config for detailed logging
+			// on the property resolution process
+			// org.slf4j.simpleLogger.log.org.apache.wicket.resource.loader=DEBUG
+			// org.slf4j.simpleLogger.log.org.apache.wicket.Localizer=DEBUG
 
 			final Localizer localizer = formComponent.getLocalizer();
 
@@ -771,12 +768,12 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 		{
 			if (values != null && values.length == 1 && values[0] == null)
 			{
-				// we the key got passed in (otherwise values would be null),
+				// the key got passed in (otherwise values would be null),
 				// but the value was set to null.
 				// As the servlet spec isn't clear on what to do with 'empty'
 				// request values - most return an empty string, but some null -
 				// we have to workaround here and deliberately set to an empty
-				// string if the the component is not nullable (text components)
+				// string if the component is not nullable (text components)
 				return EMPTY_STRING_ARRAY;
 			}
 		}
@@ -949,7 +946,7 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 	 * Gets whether this component's input can be null. By default, components that do not get input
 	 * will have null values passed in for input. However, component TextField is an example
 	 * (possibly the only one) that never gets a null passed in, even if the field is left empty
-	 * UNLESS it had attribute <code>disabled="disabled"</code> set.
+	 * UNLESS it has attribute <code>disabled="disabled"</code> set.
 	 * 
 	 * @return True if this component's input can be null. Returns true by default.
 	 */

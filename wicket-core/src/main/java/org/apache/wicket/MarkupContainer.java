@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.commons.collections4.map.LinkedMap;
+import org.apache.wicket.behavior.OutputMarkupContainerClassNameBehavior;
 import org.apache.wicket.core.util.string.ComponentStrings;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.ComponentTag.IAutoComponentFactory;
@@ -71,13 +72,14 @@ import org.slf4j.LoggerFactory;
  * nested container "b" which held a nested component "c", then a.get("b:c") would return the
  * Component with id "c". The number of children in a MarkupContainer can be determined by calling
  * size(), and the whole hierarchy of children held by a MarkupContainer can be traversed by calling
- * visitChildren(), passing in an implementation of IVisitor.
+ * visitChildren(), passing in an implementation of IVisitor.</li>
  * 
  * <li><b>Markup Rendering </b>- A MarkupContainer also holds/references associated markup which is
  * used to render the container. As the markup stream for a container is rendered, component
  * references in the markup are resolved by using the container to look up Components in the
  * container's component map by id. Each component referenced by the markup stream is given an
- * opportunity to render itself using the markup stream.
+ * opportunity to render itself using the markup stream.</li>
+ * </ul>
  * <p>
  * Components may alter their referring tag, replace the tag's body or insert markup after the tag.
  * But components cannot remove tags from the markup stream. This is an important guarantee because
@@ -134,12 +136,6 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	{
 		private static final long serialVersionUID = 1L;
 	};
-	
-	/**
-	 * This flag tracks if the {@link #REMOVALS_KEY} has been set on this component. Clearing this
-	 * key is an expensive operation. With this flag this expensive call can be avoided.
-	 */
-	private static final short RFLAG_HAS_REMOVALS = 0x4000;
 
 	private abstract static class ImmutableVisit extends Visit<Void>
 	{
@@ -824,10 +820,8 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 * 
 	 * @param openTagName
 	 *            the tag to render the associated markup for
-	 * @param exceptionMessage
-	 *            message that will be used for exceptions
 	 */
-	public final void renderAssociatedMarkup(final String openTagName, final String exceptionMessage)
+	public final void renderAssociatedMarkup(final String openTagName)
 	{
 		// Get associated markup file for the Border or Panel component
 		final MarkupStream associatedMarkupStream = new MarkupStream(getMarkup(null));
@@ -836,43 +830,32 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		MarkupElement elem = associatedMarkupStream.get();
 		if ((elem instanceof ComponentTag) == false)
 		{
-			associatedMarkupStream.throwMarkupException("Expected the open tag. " +
-				exceptionMessage);
+			associatedMarkupStream.throwMarkupException("Expected the open tag. Markup for a "
+				+ openTagName + " component must begin a tag like '<wicket:" + openTagName + ">'");
 		}
 
 		// Check for required open tag name
 		ComponentTag associatedMarkupOpenTag = (ComponentTag)elem;
 		if (!(associatedMarkupOpenTag.isOpen() && (associatedMarkupOpenTag instanceof WicketTag)))
 		{
-			associatedMarkupStream.throwMarkupException(exceptionMessage);
+			associatedMarkupStream.throwMarkupException("Markup for a " + openTagName
+				+ " component must begin a tag like '<wicket:" + openTagName + ">'");
 		}
 
 		try
 		{
 			setIgnoreAttributeModifier(true);
+			final boolean outputClassName = getApplication().getDebugSettings()
+					.isOutputMarkupContainerClassName();
+			if (outputClassName)
+			{
+				associatedMarkupOpenTag.addBehavior(OutputMarkupContainerClassNameBehavior.INSTANCE);
+			}
+
 			renderComponentTag(associatedMarkupOpenTag);
 			associatedMarkupStream.next();
 
-			String className = null;
-
-			final boolean outputClassName = getApplication().getDebugSettings()
-				.isOutputMarkupContainerClassName();
-			if (outputClassName)
-			{
-				className = Classes.name(getClass());
-				getResponse().write("<!-- MARKUP FOR ");
-				getResponse().write(className);
-				getResponse().write(" BEGIN -->");
-			}
-
 			renderComponentTagBody(associatedMarkupStream, associatedMarkupOpenTag);
-
-			if (outputClassName)
-			{
-				getResponse().write("<!-- MARKUP FOR ");
-				getResponse().write(className);
-				getResponse().write(" END -->");
-			}
 
 			renderClosingComponentTag(associatedMarkupStream, associatedMarkupOpenTag, false);
 		}
@@ -1584,7 +1567,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 */
 	private LinkedList<RemovedChild> removals_get()
 	{
-		return getRequestFlag(RFLAG_HAS_REMOVALS) ? getMetaData(REMOVALS_KEY) : null;
+		return getRequestFlag(RFLAG_CONTAINER_HAS_REMOVALS) ? getMetaData(REMOVALS_KEY) : null;
 	}
 
 	/**
@@ -1596,7 +1579,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 */
 	private void removals_set(LinkedList<RemovedChild> removals)
 	{
-		setRequestFlag(RFLAG_HAS_REMOVALS, removals != null);
+		setRequestFlag(RFLAG_CONTAINER_HAS_REMOVALS, removals != null);
 		setMetaData(REMOVALS_KEY, removals);
 	}
 
@@ -1605,7 +1588,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	 */
 	private void removals_clear()
 	{
-		if (getRequestFlag(RFLAG_HAS_REMOVALS))
+		if (getRequestFlag(RFLAG_CONTAINER_HAS_REMOVALS))
 		{
 			removals_set(null);
 		}
@@ -2385,7 +2368,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 	/**
 	 * Adds a dequeued component to this container. This method should rarely be overridden because
 	 * the common case of simply forwarding the component to
-	 * {@link MarkupContainer#add(Component...))} method should cover most cases. Components that
+	 * {@link MarkupContainer#add(Component...)} method should cover most cases. Components that
 	 * implement a custom hierarchy, such as borders, may wish to override it to support edge-case
 	 * non-standard behavior.
 	 * 

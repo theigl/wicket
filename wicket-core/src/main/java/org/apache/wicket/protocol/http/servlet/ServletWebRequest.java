@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.fileupload.FileItemFactory;
-import org.apache.commons.fileupload.FileUploadException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.fileupload2.FileItemFactory;
+import org.apache.commons.fileupload2.FileUploadException;
 import org.apache.wicket.protocol.http.RequestUtils;
 import org.apache.wicket.request.IRequestParameters;
 import org.apache.wicket.request.IWritableRequestParameters;
@@ -117,7 +117,7 @@ public class ServletWebRequest extends WebRequest
 	 * Example: if current url is
 	 * 
 	 * <pre>
-	 * http://localhost:8080/context/filter/mapping/wicket/bookmarkable/com.foo.Page?1&id=2
+	 * http://localhost:8080/context/filter/mapping/wicket/bookmarkable/com.foo.Page?1&amp;id=2
 	 * </pre>
 	 * 
 	 * the base url is <em>wicket/bookmarkable/com.foo.Page</em>

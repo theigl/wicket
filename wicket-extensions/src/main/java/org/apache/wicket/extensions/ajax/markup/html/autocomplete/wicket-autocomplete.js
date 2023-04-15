@@ -74,6 +74,15 @@
 		//this is the minimum input length required to display the autocomplete list
 		var minInputLength = cfg.showListOnEmptyInput === true ? 0 : cfg.minInputLength || 1;
 
+		// timeout handler that cancels the hiding of the menu if the focus is still on menu items
+		var hideAutoCompleteTimer;
+
+		// A flag indicating whether the 'change' event has been triggered manually after selection
+		// from the menu.
+		// In this case we don't want to render the menu.
+		// It is usually rendered on successful Ajax response
+		var isTriggeredChange = false;
+
 		function initialize(){
 			var isShowing = false;
 			// Remove the autocompletion menu if still present from
@@ -90,11 +99,10 @@
 
 			Wicket.Event.add(obj, 'blur', function (jqEvent) {
 				var menuId=getMenuId();
-
 				//workaround for IE. Clicks on scrollbar trigger
 				//'blur' event on input field. (See https://issues.apache.org/jira/browse/WICKET-5882)
 				if (menuId !== document.activeElement.id && (menuId + "-container") !== document.activeElement.id) {
-					window.setTimeout(hideAutoComplete, 500);
+					hideAutoCompleteTimer = window.setTimeout(hideAutoComplete, 500);
 				} else {
 					jQuery(this).trigger("focus");
 				}
@@ -116,32 +124,37 @@
 			Wicket.Event.add(obj, 'keydown', function (jqEvent) {
 				switch(Wicket.Event.keyCode(jqEvent)){
 					case KEY_UP:
-						if (selected>-1) {
-							setSelected(selected-1);
+						if (elementCount > 0) {
+							if (selected>-1) {
+								setSelected(selected-1);
+							}
+	
+							var searchTerm = Wicket.$(ajaxAttributes.c).value;
+							if(selected === -1 && searchTerm) {
+								// select the last element
+								setSelected(elementCount-1);
+								showAutoComplete();
+							}
+							render(true, false);
 						}
-
-						var searchTerm = Wicket.$(ajaxAttributes.c).value;
-						if(selected === -1 && searchTerm) {
-							// select the last element
-							setSelected(elementCount-1);
-							showAutoComplete();
-						}
-						render(true, false);
 
 						break;
 					case KEY_DOWN:
-						if (selected < elementCount-1) {
-							setSelected(selected+1);
-						} else if (selected === elementCount-1) {
-							// select the first element
-							setSelected(0);
+						if (elementCount > 0) {
+							if (selected < elementCount-1) {
+								setSelected(selected+1);
+							} else if (selected === elementCount-1) {
+								// select the first element
+								setSelected(0);
+							}
+							if (visible === 0) {
+								updateChoices();
+							} else {
+								render(true, false);
+								showAutoComplete();
+							}
 						}
-						if (visible === 0) {
-							updateChoices();
-						} else {
-							render(true, false);
-							showAutoComplete();
-						}
+						
 						break;
 					case KEY_ESC:
 						if (visible === 1) {
@@ -312,7 +325,6 @@
 				container.appendChild(choiceDiv);
 				choiceDiv.id=getMenuId();
 				choiceDiv.className="wicket-aa";
-
 			}
 
 
@@ -427,6 +439,7 @@
 		}
 
 		function hideAutoComplete(){
+			hideAutoCompleteTimer = undefined;
 			visible = 0;
 			setSelected(-1);
 			
@@ -443,9 +456,10 @@
 			}
 			
 			if (triggerChangeOnHide) {
-				var input = Wicket.$(ajaxAttributes.c);
-				jQuery(input).trigger('change');
 				triggerChangeOnHide = false;
+				var input = Wicket.$(ajaxAttributes.c);
+				isTriggeredChange = true;
+				jQuery(input).trigger('change');
 			}
 		}
 
@@ -629,10 +643,22 @@
 					render(false, false); // don't scroll - breaks mouse wheel scrolling
 					showAutoComplete();
 				};
+
+				var mouseDownFunc = function(event) {
+					// Give a chance the menu's blur event handler to be executed and eventually set
+					// 'hideAutoCompleteTimer'
+					// And then cancel the hiding of the menu
+					window.setTimeout(function() {
+						if (hideAutoCompleteTimer) {
+							window.clearTimeout(hideAutoCompleteTimer);
+						}
+					}, 50);
+				};
 				for(var i = 0;i < elementCount; i++) {
 					var node = selectableElements[i];
 					node.onclick = clickFunc;
 					node.onmouseover = mouseOverFunc;
+					node.onmousedown = mouseDownFunc;
 				}
 			} else {
 				elementCount=0;
@@ -658,7 +684,12 @@
 					}
 					setSelected(selectedIndex);
 				}
-				showAutoComplete();
+
+				if (isTriggeredChange) {
+					isTriggeredChange = false;
+				} else {
+					showAutoComplete();
+				}
 			} else {
 				hideAutoComplete();
 			}

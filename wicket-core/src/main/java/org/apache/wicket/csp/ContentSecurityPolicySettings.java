@@ -77,9 +77,8 @@ public class ContentSecurityPolicySettings
 	{
 		Args.notNull(application, "application");
 		
-		nonceCreator = () -> {
-				return application.getSecuritySettings().getRandomSupplier().getRandomBase64(NONCE_LENGTH);
-			};
+		nonceCreator = () ->
+				application.getSecuritySettings().getRandomSupplier().getRandomBase64(NONCE_LENGTH);
 	}
 
 	public CSPHeaderConfiguration blocking()
@@ -206,7 +205,7 @@ public class ContentSecurityPolicySettings
 	{
 		application.getRequestCycleListeners().add(new CSPRequestCycleListener(this));
 		application.getHeaderResponseDecorators()
-			.add(response -> new CSPNonceHeaderResponseDecorator(response, this));
+			.addPreResourceAggregationDecorator(response -> new CSPNonceHeaderResponseDecorator(response, this));
 		application.mount(new ReportCSPViolationMapper(this));
 	}
 

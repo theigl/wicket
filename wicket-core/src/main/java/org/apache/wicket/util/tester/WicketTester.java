@@ -28,7 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.wicket.Component;
@@ -142,22 +142,23 @@ import org.slf4j.LoggerFactory;
  * {@link Component#getPageRelativePath()}. Since each Component has an ID/name, any Component can
  * also be referenced by its ID {@link MarkupContainer#get(String)}. And since MarkupContainer's and
  * its subclasses are containers which allow to add Components (in sync with the markup hierarchy),
- * you may not only access direct childs but also subchilds like get("myPanel:myForm:myNameField")
+ * you may not only access direct children but also grandchildren like get("myPanel:myForm:myNameField")
  * separating each ID with a ':'.
  *
- * Cookie handling:
+ * <h2>Cookie handling</h2>
  *
- * There are some expectations about wicket tester cookie handling which should match as best as it
- * can be with a real client server request response cycle: - all valid cookies set before a request
- * is made (tester.getRequest().addCookie()) should appear in the page request - all cookies set in
- * the response should appear in the last response (tester.getLastResponse()) after the request is
- * made (expired cookies and others) - all cookies set in the response should appear even after a
- * redirect response is made until the final response (tester.getLastResponse()) is written to the
- * client (wicket tester) - all valid cookies (maxAge!=0) from the last response should be added to
- * the next request cookies (tester.getRequest().getCookies())
- *
- *
- * TODO General: Example usage of FormTester
+ * There are some expectations about wicket tester cookie handling which should match as best as
+ * it can be with a real client server request response cycle:
+ * <ul>
+ *  <li> all valid cookies set before a request is made (tester.getRequest().addCookie()) should
+ *   appear in the page request</li>
+ *  <li> all cookies set in the response should appear in the last response (tester.getLastResponse())
+ *   after the request is made (expired cookies and others)</li>
+ *  <li> all cookies set in the response should appear even after a redirect response is made
+ *   until the final response (tester.getLastResponse()) is written to the client (wicket tester)</li>
+ *  <li> all valid cookies (maxAge!=0) from the last response should be added to
+ *   the next request cookies (tester.getRequest().getCookies())</li>
+ * </ul>
  *
  * @author Ingram Chen
  * @author Juergen Donnerstag
@@ -166,7 +167,6 @@ import org.slf4j.LoggerFactory;
  */
 public class WicketTester extends BaseWicketTester
 {
-	/** log. */
 	private static final Logger log = LoggerFactory.getLogger(WicketTester.class);
 
 	/**
@@ -825,7 +825,7 @@ public class WicketTester extends BaseWicketTester
 	}
 
 	/**
-	 * Asserts that that the BookmarkablePageLink<?> identified by "id" points to the page as
+	 * Asserts that that the BookmarkablePageLink identified by "id" points to the page as
 	 * expected - including parameters.
 	 *
 	 * @param id

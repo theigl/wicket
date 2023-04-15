@@ -43,32 +43,27 @@ import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.io.filefilter.AgeFileFilter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.wicket.Application;
 import org.apache.wicket.ThreadContext;
 import org.apache.wicket.mock.MockApplication;
 import org.apache.wicket.protocol.http.mock.MockHttpServletRequest;
 import org.apache.wicket.protocol.http.mock.MockHttpServletResponse;
 import org.apache.wicket.protocol.http.mock.MockServletContext;
-import org.apache.wicket.protocol.http.servlet.ResponseIOException;
 import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.request.resource.AbstractResource;
-import org.apache.wicket.request.resource.ContentDisposition;
 import org.apache.wicket.request.resource.DynamicImageResource;
 import org.apache.wicket.request.resource.IResource;
-import org.apache.wicket.request.resource.AbstractResource.ResourceResponse;
-import org.apache.wicket.request.resource.AbstractResource.WriteCallback;
-import org.apache.wicket.request.resource.IResource.Attributes;
 import org.apache.wicket.util.WicketTestTag;
 import org.apache.wicket.util.file.WebXmlFile;
 import org.apache.wicket.util.string.Strings;
@@ -88,7 +83,7 @@ public class WicketFilterTest
 {
 	private static WebApplication application;
 	private final DateFormat headerDateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z",
-		Locale.UK);
+		Locale.ROOT);
 
 	/**
 	 * @throws Exception

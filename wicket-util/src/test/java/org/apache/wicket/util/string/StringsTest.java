@@ -23,17 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings("javadoc")
-public class StringsTest
+class StringsTest
 {
 	@Test
-	void stripJSessionId()
+	void stripJSessionId() throws Exception
 	{
 		String url = "http://localhost/abc";
 		assertEquals(url, Strings.stripJSessionId(url));
@@ -50,6 +49,19 @@ public class StringsTest
 		assertEquals(url + ";a=b;c=d", Strings.stripJSessionId(url + ";a=b;c=d;jsessionid=12345"));
 		assertEquals(url + ";a=b;c=d?param=a;b",
 			Strings.stripJSessionId(url + ";a=b;c=d;jsessionid=12345?param=a;b"));
+
+		// WICKET-6858
+		final Field sessionIdParamField = Strings.class.getDeclaredField("SESSION_ID_PARAM");
+		sessionIdParamField.setAccessible(true);
+		try {
+			final String customSessionIdParam = ";Custom seSsion - ид=";
+			sessionIdParamField.set(null, customSessionIdParam);
+			assertEquals(url + ";a=b;c=d?param=a;b",
+			             Strings.stripJSessionId(url + ";a=b;c=d" + customSessionIdParam + "12345?param=a;b"));
+		} finally {
+			sessionIdParamField.set(null, "jsessionid");
+			sessionIdParamField.setAccessible(false);
+		}
 	}
 
 	@Test
@@ -211,11 +223,6 @@ public class StringsTest
 				"&#199;&#252;&#233;&#226;&#228;&#224;&#229;&#231;&#234;&#235;"));
 	}
 
-	private String convertNonASCIIString(final String str) throws UnsupportedEncodingException
-	{
-		return new String(str.getBytes(), "iso-8859-1");
-	}
-
 	@Test
 	void firstPathComponent()
 	{
@@ -234,8 +241,24 @@ public class StringsTest
 		assertTrue(Strings.isEmpty(" "));
 		assertTrue(Strings.isEmpty("           "));
 		assertTrue(Strings.isEmpty(" \n\t"));
+
 		assertFalse(Strings.isEmpty("a"));
 		assertFalse(Strings.isEmpty(" a"));
+		assertFalse(Strings.isEmpty("a "));
+	}
+
+	@Test
+	void isEmptyCharSequence()
+	{
+		assertTrue(Strings.isEmpty((AppendingStringBuffer)null));
+		assertTrue(Strings.isEmpty(new AppendingStringBuffer("")));
+		assertTrue(Strings.isEmpty(new AppendingStringBuffer(" ")));
+		assertTrue(Strings.isEmpty(new AppendingStringBuffer("           ")));
+		assertTrue(Strings.isEmpty(new AppendingStringBuffer(" \n\t")));
+
+		assertFalse(Strings.isEmpty(new AppendingStringBuffer("a")));
+		assertFalse(Strings.isEmpty(new AppendingStringBuffer(" a")));
+		assertFalse(Strings.isEmpty(new AppendingStringBuffer("a ")));
 	}
 
 	@Test

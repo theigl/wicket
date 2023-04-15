@@ -140,22 +140,6 @@ function generate_signatures_from_release {
 
     echo "========================================================================
 
-    The signatures for the source release artefacts:
-
-    " > /tmp/release-$version-sigs.txt
-
-    pushd target/dist > /dev/null
-    for i in apache-wicket*{zip,tar.gz}
-    do
-        echo "Signature for $i:
-
-    $(cat $i.asc)
-    " >> /tmp/release-$version-sigs.txt
-    done
-    popd > /dev/null
-
-        echo "========================================================================
-
     CHANGELOG for $version:
     " >> /tmp/release-$version-sigs.txt
 
@@ -218,8 +202,7 @@ more. You can find more about Apache Wicket at https://wicket.apache.org
 
 This release marks another minor release of Wicket $major_version. We
 use semantic versioning for the development of Wicket, and as such no
-API breaks are present breaks are present in this release compared to
-$major_version.0.0.
+API breaks are present in this release compared to $major_version.0.0.
 
 <OPTIONAL> New and noteworthy
 <OPTIONAL> ------------------

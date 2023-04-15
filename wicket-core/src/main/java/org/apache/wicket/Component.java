@@ -77,7 +77,7 @@ import org.apache.wicket.request.component.IRequestablePage;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.ResourceReference;
-import org.apache.wicket.response.StringResponse;
+import org.apache.wicket.response.LazyStringResponse;
 import org.apache.wicket.settings.DebugSettings;
 import org.apache.wicket.settings.ExceptionSettings;
 import org.apache.wicket.util.IHierarchical;
@@ -206,6 +206,7 @@ import org.slf4j.LoggerFactory;
  * <li><b>Security </b>- All components are subject to an {@link IAuthorizationStrategy} which
  * controls instantiation, visibility and enabling. See {@link SimplePageAuthorizationStrategy} for
  * a simple implementation.</li>
+ * </ul>
  * 
  * @author Jonathan Locke
  * @author Chris Turner
@@ -421,26 +422,34 @@ public abstract class Component
 	private int flags = FLAG_VISIBLE | FLAG_ESCAPE_MODEL_STRINGS | FLAG_VERSIONED | FLAG_ENABLED |
 		FLAG_IS_RENDER_ALLOWED | FLAG_VISIBILITY_ALLOWED | FLAG_RESERVED5 /* page's stateless hint */;
 
-	private static final short RFLAG_ENABLED_IN_HIERARCHY_VALUE = 0x1;
-	private static final short RFLAG_ENABLED_IN_HIERARCHY_SET = 0x2;
-	private static final short RFLAG_ON_CONFIGURE_SUPER_CALL_VERIFIED = 0x4;
-	private static final short RFLAG_VISIBLE_IN_HIERARCHY_SET = 0x8;
+	// @formatter:off	
+	private static final short RFLAG_ENABLED_IN_HIERARCHY_VALUE        = 0x1;
+	private static final short RFLAG_ENABLED_IN_HIERARCHY_SET          = 0x2;
+	private static final short RFLAG_VISIBLE_IN_HIERARCHY_VALUE        = 0x4;
+	private static final short RFLAG_VISIBLE_IN_HIERARCHY_SET          = 0x8;
 	/** onconfigure has been called */
-	private static final short RFLAG_CONFIGURED = 0x10;
+	private static final short RFLAG_CONFIGURED                        = 0x10;
 	private static final short RFLAG_BEFORE_RENDER_SUPER_CALL_VERIFIED = 0x20;
-	private static final short RFLAG_INITIALIZE_SUPER_CALL_VERIFIED = 0x40;
-	protected static final short RFLAG_CONTAINER_DEQUEING = 0x80;
-	private static final short RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED = 0x100;
+	private static final short RFLAG_INITIALIZE_SUPER_CALL_VERIFIED    = 0x40;
+	protected static final short RFLAG_CONTAINER_DEQUEING              = 0x80;
+	private static final short RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED     = 0x100;
 	/**
 	 * Flag that makes we are in before-render callback phase Set after component.onBeforeRender is
 	 * invoked (right before invoking beforeRender on children)
 	 */
-	private static final short RFLAG_RENDERING = 0x200;
-	private static final short RFLAG_PREPARED_FOR_RENDER = 0x400;
-	private static final short RFLAG_AFTER_RENDER_SUPER_CALL_VERIFIED = 0x800;
-	private static final short RFLAG_DETACHING = 0x1000;	
+	private static final short RFLAG_RENDERING                         = 0x200;
+	private static final short RFLAG_PREPARED_FOR_RENDER               = 0x400;
+	private static final short RFLAG_AFTER_RENDER_SUPER_CALL_VERIFIED  = 0x800;
+	private static final short RFLAG_DETACHING                         = 0x1000;
 	/** True when a component is being removed from the hierarchy */
-	private static final short RFLAG_REMOVING_FROM_HIERARCHY = 0x2000;
+	private static final short RFLAG_REMOVING_FROM_HIERARCHY           = 0x2000;
+	/**
+	 * This flag tracks if removals have been set on this component. Clearing this key is an
+	 * expensive operation. With this flag this expensive call can be avoided.
+	 */
+	protected static final short RFLAG_CONTAINER_HAS_REMOVALS          = 0x4000;
+	private static final short RFLAG_ON_CONFIGURE_SUPER_CALL_VERIFIED  = (short) 0x8000;
+	// @formatter:on
 
 	/**
 	 * Flags that only keep their value during the request. Useful for cache markers, etc. At the
@@ -2099,15 +2108,25 @@ public abstract class Component
 	 */
 	public final boolean isVisibleInHierarchy()
 	{
+		if (getRequestFlag(RFLAG_VISIBLE_IN_HIERARCHY_SET))
+		{
+			return getRequestFlag(RFLAG_VISIBLE_IN_HIERARCHY_VALUE);
+		}
+
+		final boolean state;
 		Component parent = getParent();
 		if (parent != null && !parent.isVisibleInHierarchy())
 		{
-			return false;
+			state = false;
 		}
 		else
 		{
-			return determineVisibility();
+			state = determineVisibility();
 		}
+
+		setRequestFlag(RFLAG_VISIBLE_IN_HIERARCHY_SET, true);
+		setRequestFlag(RFLAG_VISIBLE_IN_HIERARCHY_VALUE, state);
+		return state;
 	}
 
 	/**
@@ -2501,7 +2520,7 @@ public abstract class Component
 					{
 						// Close the manually opened tag. And since the user might have changed the
 						// tag name ...
-						getResponse().write(tag.syntheticCloseTagString());
+						tag.writeSyntheticCloseTag(getResponse());
 					}
 				}
 			}
@@ -2620,7 +2639,7 @@ public abstract class Component
 			boolean wasRendered = response.wasRendered(this);
 			if (wasRendered == false)
 			{
-				StringResponse markupHeaderResponse = new StringResponse();
+				LazyStringResponse markupHeaderResponse = new LazyStringResponse();
 				Response oldResponse = getResponse();
 				RequestCycle.get().setResponse(markupHeaderResponse);
 				try
@@ -2647,10 +2666,10 @@ public abstract class Component
 			{
 				if (isBehaviorAccepted(behavior))
 				{
-					if (response.wasRendered(behavior) == false)
+					List<IClusterable> pair = List.of(this, behavior);
+					if (!response.wasRendered(pair))
 					{
 						behavior.renderHead(this, response);
-						List<IClusterable> pair = Arrays.asList(this, behavior);
 						response.markRendered(pair);
 					}
 				}
@@ -2875,7 +2894,7 @@ public abstract class Component
 		MetaDataEntry<?>[] old = getMetaData();
 
 		Object metaData = null;
-		MetaDataEntry<?>[] metaDataArray = key.set(getMetaData(), object);
+		MetaDataEntry<?>[] metaDataArray = key.set(old, object);
 		if (metaDataArray != null && metaDataArray.length > 0)
 		{
 			metaData = (metaDataArray.length > 1) ? metaDataArray : metaDataArray[0];
@@ -3048,7 +3067,7 @@ public abstract class Component
 
 	/**
 	 * Render a placeholder tag when the component is not visible. The tag is of form:
-	 * &lt;componenttag hidden=""" id="markupid"/&gt;. This method will also call
+	 * &lt;componenttag hidden="" id="markupid"/&gt;. This method will also call
 	 * <code>setOutputMarkupId(true)</code>.
 	 * 
 	 * This is useful, for example, in ajax situations where the component starts out invisible and
@@ -3915,6 +3934,7 @@ public abstract class Component
 			// apply behaviors that are attached to the component tag.
 			if (tag.hasBehaviors())
 			{
+				tag = tag.mutable();
 				Iterator<? extends Behavior> tagBehaviors = tag.getBehaviors();
 				while (tagBehaviors.hasNext())
 				{
@@ -4220,7 +4240,7 @@ public abstract class Component
 				// Render the close tag
 				if ((renderBodyOnly == false) && needToRenderTag(openTag))
 				{
-					getResponse().write(openTag.syntheticCloseTagString());
+					openTag.writeSyntheticCloseTag(getResponse());
 				}
 			}
 			else if (openTag.requiresCloseTag())
@@ -4310,7 +4330,11 @@ public abstract class Component
 	 */
 	public final Component setVisibilityAllowed(boolean allowed)
 	{
-		setFlag(FLAG_VISIBILITY_ALLOWED, allowed);
+		if (allowed != getFlag(FLAG_VISIBILITY_ALLOWED))
+		{
+			setFlag(FLAG_VISIBILITY_ALLOWED, allowed);
+			onVisibleStateChanged();
+		}
 		return this;
 	}
 
@@ -4476,10 +4500,10 @@ public abstract class Component
 	}
 
 	/**
-	 * Gets the currently coupled {@link Behavior}s as a unmodifiable list. Returns an empty list
+	 * Gets the currently coupled {@link Behavior}s as an unmodifiable list. Returns an empty list
 	 * rather than null if there are no behaviors coupled to this component.
 	 * 
-	 * @return The currently coupled behaviors as a unmodifiable list
+	 * @return The currently coupled behaviors as an unmodifiable list
 	 */
 	public final List<? extends Behavior> getBehaviors()
 	{

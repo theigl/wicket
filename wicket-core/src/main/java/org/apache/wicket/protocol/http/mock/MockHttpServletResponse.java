@@ -33,10 +33,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.wicket.protocol.http.IMetaDataBufferingWebResponse;
 import org.apache.wicket.request.http.WebResponse;
@@ -186,34 +186,7 @@ public class MockHttpServletResponse implements HttpServletResponse, IMetaDataBu
 	 * @return The encoded url
 	 */
 	@Override
-	public String encodeRedirectUrl(final String url)
-	{
-		return url;
-	}
-
-	/**
-	 * Encode the redirectLocation URL. Does no changes as this test implementation uses cookie
-	 * based url tracking.
-	 * 
-	 * @param url
-	 *            The url to encode
-	 * @return The encoded url
-	 */
-	@Override
 	public String encodeRedirectURL(final String url)
-	{
-		return url;
-	}
-
-	/**
-	 * Encode the URL. Does no changes as this test implementation uses cookie based url tracking.
-	 * 
-	 * @param url
-	 *            The url to encode
-	 * @return The encoded url
-	 */
-	@Override
-	public String encodeUrl(final String url)
 	{
 		return url;
 	}
@@ -797,22 +770,6 @@ public class MockHttpServletResponse implements HttpServletResponse, IMetaDataBu
 	public void setStatus(final int status)
 	{
 		this.status = status;
-	}
-
-	/**
-	 * Set the status for this response.
-	 * 
-	 * @param status
-	 *            The status
-	 * @param msg
-	 *            The message
-	 * @deprecated
-	 */
-	@Override
-	@Deprecated
-	public void setStatus(final int status, final String msg)
-	{
-		setStatus(status);
 	}
 
 	/**

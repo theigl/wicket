@@ -74,7 +74,7 @@ public class StartJavaScriptTests
 			// use this certificate anywhere important as the passwords are
 			// available in the source.
 
-			SslContextFactory sslContextFactory = new SslContextFactory.Server();
+			SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
 			sslContextFactory.setKeyStoreResource(keystore);
 			sslContextFactory.setKeyStorePassword("wicket");
 			sslContextFactory.setKeyManagerPassword("wicket");
@@ -130,7 +130,7 @@ public class StartJavaScriptTests
 	{
 		try
 		{
-			Desktop.getDesktop().browse(new URI("http://localhost:8080/ajax-tests/test/js/all.html?2.2.4"));
+			Desktop.getDesktop().browse(new URI("http://localhost:8080/ajax-tests/test/js/all.html?3.6.4"));
 		}
 		catch (Exception e)
 		{

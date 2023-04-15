@@ -20,18 +20,17 @@
 	<parent>
 		<groupId>org.apache.wicket</groupId>
 		<artifactId>wicket-parent</artifactId>
-		<version>9.1.0-SNAPSHOT</version>
+		<version>10.0.0-M1-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>wicket-extensions</artifactId>
 	<packaging>bundle</packaging>
 	<name>Wicket Extensions</name>
 	<description>Wicket Extensions is a rich component library for the Wicket framework.</description>
-
 	<properties>
-		<automatic-module-name>org.apache.wicket.extensions</automatic-module-name>
+		<osgi.export.package>org.apache.wicket.extensions*;-noimport:=true</osgi.export.package>
+		<osgi.import.package>!java*,!kotlin*,!sun.nio.ch,org.slf4j*;version="[1.7,3)",*</osgi.import.package>
 	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
